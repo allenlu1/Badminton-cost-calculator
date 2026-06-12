@@ -180,7 +180,7 @@
     <h2>Session date</h2>
     <div class="field-row">
       <label>Date</label>
-      <input type="date" id="sessionDate" />
+      <input type="date" id="sessionDate" oninput="refreshPreview()" />
     </div>
   </div>
 
@@ -197,10 +197,7 @@
       <input type="text" id="newPlayerInput" placeholder="Add player for this session…" maxlength="30" />
       <button onclick="addPlayer()"><i class="ti ti-plus" aria-hidden="true"></i> Add</button>
     </div>
-    <p class="hint">
-      <i class="ti ti-info-circle" style="font-size:13px; vertical-align:-2px;" aria-hidden="true"></i>
-      To permanently add a player, edit <code>players.json</code> in GitHub.
-    </p>
+
   </div>
 
   <!-- Costs -->
@@ -216,12 +213,8 @@
         <input type="number" id="shuttleCount" value="0" min="0" step="1" oninput="updateCalc()" />
       </div>
       <div class="cost-field">
-        <label>Cost per shuttlecock ($)</label>
-        <input type="number" id="shuttleUnitCost" value="0" min="0" step="0.5" oninput="updateCalc()" />
-      </div>
-      <div class="cost-field">
-        <label>Total shuttlecock cost ($)</label>
-        <div class="computed" id="shuttleTotalDisplay">$0.00</div>
+        <label>Shuttlecocks total cost ($)</label>
+        <input type="number" id="shuttleTotal" value="0" min="0" step="0.5" oninput="updateCalc()" />
       </div>
     </div>
 
@@ -248,6 +241,18 @@
       <thead><tr><th>Name</th><th>Count</th><th>Amount</th></tr></thead>
       <tbody id="attendanceBody"></tbody>
     </table>
+    <div style="margin-top:14px;">
+      <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:6px;">
+        <span style="font-size:13px; color:var(--text-secondary);">Payment message — review and edit before copying</span>
+        <button class="reset-btn" onclick="refreshPreview()" style="font-size:12px;"><i class="ti ti-refresh" aria-hidden="true"></i> Refresh</button>
+      </div>
+      <textarea id="msgPreview" rows="12" style="
+        width:100%; padding:10px 12px; border-radius:var(--radius-md);
+        border:0.5px solid var(--border); background:var(--bg-secondary);
+        color:var(--text-primary); font-family:var(--font); font-size:13px;
+        line-height:1.6; resize:vertical; outline:none;
+      "></textarea>
+    </div>
     <button class="copy-btn" onclick="copyResult()">
       <i class="ti ti-copy" aria-hidden="true"></i> Copy payment message
     </button>
@@ -362,10 +367,7 @@
   function updateCalc() {
     const court = parseFloat(document.getElementById('courtFee').value) || 0;
     const shuttleCount = parseInt(document.getElementById('shuttleCount').value) || 0;
-    const shuttleUnit = parseFloat(document.getElementById('shuttleUnitCost').value) || 0;
-    const shuttleTotal = shuttleCount * shuttleUnit;
-
-    document.getElementById('shuttleTotalDisplay').textContent = '$' + shuttleTotal.toFixed(2);
+    const shuttleTotal = parseFloat(document.getElementById('shuttleTotal').value) || 0;
 
     const total = court + shuttleTotal;
     const selected = players.filter(p => p.selected);
@@ -400,13 +402,14 @@
       `;
       tbody.appendChild(tr);
     });
+
+    document.getElementById('msgPreview').value = buildMessage();
   }
 
-  function copyResult() {
+  function buildMessage() {
     const court = parseFloat(document.getElementById('courtFee').value) || 0;
     const shuttleCount = parseInt(document.getElementById('shuttleCount').value) || 0;
-    const shuttleUnit = parseFloat(document.getElementById('shuttleUnitCost').value) || 0;
-    const shuttleTotal = shuttleCount * shuttleUnit;
+    const shuttleTotal = parseFloat(document.getElementById('shuttleTotal').value) || 0;
     const total = court + shuttleTotal;
     const selected = players.filter(p => p.selected);
     const headcount = selected.reduce((s, p) => s + 1 + p.guests, 0);
@@ -425,7 +428,15 @@
     msg += `Acc: 477398765\n`;
     msg += `Name: I-Wei Lu\n\n`;
     msg += `Please like the post once you've made the payment. Thx`;
+    return msg;
+  }
 
+  function refreshPreview() {
+    document.getElementById('msgPreview').value = buildMessage();
+  }
+
+  function copyResult() {
+    const msg = document.getElementById('msgPreview').value;
     navigator.clipboard.writeText(msg).then(() => {
       const btn = document.querySelector('.copy-btn');
       btn.innerHTML = '<i class="ti ti-check"></i> Copied!';
