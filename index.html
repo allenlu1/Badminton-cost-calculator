@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Badminton Cost Calculator</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #ffffff;
+      --bg-secondary: #f5f5f3;
+      --bg-info: #e6f1fb;
+      --text-primary: #1a1a18;
+      --text-secondary: #5f5e5a;
+      --text-tertiary: #888780;
+      --text-info: #185fa5;
+      --border: rgba(0,0,0,0.15);
+      --border-info: rgba(24,95,165,0.4);
+      --radius-md: 8px;
+      --radius-lg: 12px;
+      --font: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #1e1e1c;
+        --bg-secondary: #2a2a28;
+        --bg-info: #0c447c;
+        --text-primary: #f0ede6;
+        --text-secondary: #b4b2a9;
+        --text-tertiary: #888780;
+        --text-info: #85b7eb;
+        --border: rgba(255,255,255,0.15);
+        --border-info: rgba(133,183,235,0.4);
+      }
+    }
+
+    body {
+      font-family: var(--font);
+      background: var(--bg);
+      color: var(--text-primary);
+      min-height: 100vh;
+      padding: 1.5rem 1rem 3rem;
+    }
+
+    .app { max-width: 600px; margin: 0 auto; }
+
+    header { margin-bottom: 2rem; }
+    header h1 { font-size: 22px; font-weight: 500; display: flex; align-items: center; gap: 8px; }
+    header p { font-size: 14px; color: var(--text-secondary); margin-top: 4px; }
+
+    .section { margin-bottom: 2rem; }
+    h2 { font-size: 15px; font-weight: 500; margin-bottom: 12px; }
+
+    .player-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+
+    .player-btn {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 8px 10px;
+      border-radius: var(--radius-md);
+      border: 0.5px solid var(--border);
+      background: var(--bg);
+      cursor: pointer; font-size: 13px; color: var(--text-primary);
+      font-family: var(--font);
+      gap: 6px; transition: background 0.1s;
+    }
+    .player-btn:hover { background: var(--bg-secondary); }
+    .player-btn.selected {
+      background: var(--bg-info);
+      border-color: var(--border-info);
+      color: var(--text-info);
+      font-weight: 500;
+    }
+    .player-btn .name { flex: 1; text-align: left; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+    .guest-ctrl { display: flex; align-items: center; gap: 3px; }
+    .guest-btn {
+      width: 20px; height: 20px; border-radius: 50%;
+      border: 0.5px solid currentColor; background: transparent;
+      color: inherit; cursor: pointer; font-size: 14px; line-height: 1;
+      display: flex; align-items: center; justify-content: center;
+      padding: 0; font-family: var(--font);
+    }
+    .guest-count { font-size: 12px; min-width: 12px; text-align: center; }
+
+    .add-row { display: flex; gap: 8px; }
+    .add-row input {
+      flex: 1; padding: 8px 10px; border-radius: var(--radius-md);
+      border: 0.5px solid var(--border); background: var(--bg);
+      color: var(--text-primary); font-size: 13px; font-family: var(--font);
+      outline: none;
+    }
+    .add-row input:focus { border-color: var(--border-info); box-shadow: 0 0 0 2px rgba(24,95,165,0.15); }
+    .add-row button, .copy-btn {
+      padding: 8px 14px; border-radius: var(--radius-md);
+      border: 0.5px solid var(--border); background: var(--bg);
+      color: var(--text-primary); font-size: 13px; font-family: var(--font);
+      cursor: pointer; display: flex; align-items: center; gap: 6px;
+    }
+    .add-row button:hover, .copy-btn:hover { background: var(--bg-secondary); }
+
+    .costs-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 1rem; }
+    .cost-field { display: flex; flex-direction: column; gap: 6px; }
+    .cost-field label { font-size: 13px; color: var(--text-secondary); }
+    .cost-field input {
+      padding: 8px 10px; border-radius: var(--radius-md);
+      border: 0.5px solid var(--border); background: var(--bg);
+      color: var(--text-primary); font-size: 14px; font-family: var(--font);
+      outline: none;
+    }
+    .cost-field input:focus { border-color: var(--border-info); box-shadow: 0 0 0 2px rgba(24,95,165,0.15); }
+
+    .summary-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 1.5rem; }
+    .summary-card { background: var(--bg-secondary); border-radius: var(--radius-md); padding: 12px; }
+    .summary-card .label { font-size: 12px; color: var(--text-secondary); margin-bottom: 4px; }
+    .summary-card .value { font-size: 22px; font-weight: 500; }
+    .summary-card .value.highlight { color: var(--text-info); }
+
+    table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    th { text-align: left; padding: 6px 8px; color: var(--text-secondary); font-weight: 400; border-bottom: 0.5px solid var(--border); }
+    td { padding: 9px 8px; border-bottom: 0.5px solid var(--border); }
+    tr:last-child td { border-bottom: none; }
+
+    .badge {
+      display: inline-block; font-size: 11px; padding: 2px 7px;
+      border-radius: 99px; background: var(--bg-info); color: var(--text-info);
+      margin-left: 6px;
+    }
+
+    .copy-btn { width: 100%; margin-top: 12px; justify-content: center; font-size: 14px; padding: 10px; }
+
+    .empty { font-size: 13px; color: var(--text-tertiary); padding: 0.5rem 0; }
+
+    .reset-row { display: flex; justify-content: flex-end; margin-bottom: 10px; }
+    .reset-btn {
+      background: none; border: none; color: var(--text-tertiary);
+      font-size: 12px; cursor: pointer; font-family: var(--font);
+      display: flex; align-items: center; gap: 4px; padding: 4px 0;
+    }
+    .reset-btn:hover { color: var(--text-secondary); }
+  </style>
+</head>
+<body>
+<div class="app">
+  <header>
+    <h1><i class="ti ti-racket" aria-hidden="true"></i> Badminton cost calculator</h1>
+    <p>Select who attended, enter costs, and split the bill.</p>
+  </header>
+
+  <div class="section">
+    <h2>Players</h2>
+    <div class="reset-row">
+      <button class="reset-btn" onclick="resetAll()"><i class="ti ti-refresh" aria-hidden="true"></i> Clear selection</button>
+    </div>
+    <div class="player-grid" id="playerGrid"></div>
+    <div class="add-row">
+      <input type="text" id="newPlayerInput" placeholder="Add new player name…" maxlength="30" />
+      <button onclick="addPlayer()"><i class="ti ti-plus" aria-hidden="true"></i> Add</button>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>Session costs</h2>
+    <div class="costs-row">
+      <div class="cost-field">
+        <label>Court fee ($)</label>
+        <input type="number" id="courtFee" value="80" min="0" step="1" oninput="updateCalc()" />
+      </div>
+      <div class="cost-field">
+        <label>Shuttlecocks ($)</label>
+        <input type="number" id="shuttleFee" value="30" min="0" step="1" oninput="updateCalc()" />
+      </div>
+    </div>
+    <div class="summary-cards">
+      <div class="summary-card">
+        <div class="label">Total cost</div>
+        <div class="value" id="totalCost">$0</div>
+      </div>
+      <div class="summary-card">
+        <div class="label">Players</div>
+        <div class="value" id="headcount">0</div>
+      </div>
+      <div class="summary-card">
+        <div class="label">Per person</div>
+        <div class="value highlight" id="perPerson">—</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section" id="attendanceSection" style="display:none;">
+    <h2>Attendance summary</h2>
+    <table>
+      <thead><tr><th>Name</th><th>Count</th><th>Amount</th></tr></thead>
+      <tbody id="attendanceBody"></tbody>
+    </table>
+    <button class="copy-btn" onclick="copyResult()">
+      <i class="ti ti-copy" aria-hidden="true"></i> Copy payment message
+    </button>
+  </div>
+  <p class="empty" id="emptyMsg">No players selected yet.</p>
+</div>
+
+<script>
+  const DEFAULT_PLAYERS = ["Jason","Vivian","Andy","Raymond","Cindy","Allen","Ken","Vince","Jimmy","Astrid"];
+  let players = DEFAULT_PLAYERS.map(n => ({ name: n, selected: false, guests: 0 }));
+
+  function renderPlayers() {
+    const grid = document.getElementById('playerGrid');
+    grid.innerHTML = '';
+    players.forEach((p, i) => {
+      const btn = document.createElement('button');
+      btn.className = 'player-btn' + (p.selected ? ' selected' : '');
+      btn.onclick = () => togglePlayer(i);
+
+      const nameSpan = document.createElement('span');
+      nameSpan.className = 'name';
+      nameSpan.textContent = p.name;
+      btn.appendChild(nameSpan);
+
+      if (p.selected) {
+        const ctrl = document.createElement('div');
+        ctrl.className = 'guest-ctrl';
+        ctrl.onclick = e => e.stopPropagation();
+
+        const minus = document.createElement('button');
+        minus.className = 'guest-btn';
+        minus.textContent = '−';
+        minus.setAttribute('aria-label', 'Remove guest');
+        minus.onclick = e => { e.stopPropagation(); changeGuest(i, -1); };
+
+        const count = document.createElement('span');
+        count.className = 'guest-count';
+        count.textContent = '+' + p.guests;
+
+        const plus = document.createElement('button');
+        plus.className = 'guest-btn';
+        plus.textContent = '+';
+        plus.setAttribute('aria-label', 'Add guest');
+        plus.onclick = e => { e.stopPropagation(); changeGuest(i, 1); };
+
+        ctrl.appendChild(minus);
+        ctrl.appendChild(count);
+        ctrl.appendChild(plus);
+        btn.appendChild(ctrl);
+      }
+      grid.appendChild(btn);
+    });
+    updateCalc();
+  }
+
+  function togglePlayer(i) {
+    players[i].selected = !players[i].selected;
+    if (!players[i].selected) players[i].guests = 0;
+    renderPlayers();
+  }
+
+  function changeGuest(i, delta) {
+    players[i].guests = Math.max(0, players[i].guests + delta);
+    renderPlayers();
+  }
+
+  function addPlayer() {
+    const inp = document.getElementById('newPlayerInput');
+    const name = inp.value.trim();
+    if (!name) return;
+    if (players.find(p => p.name.toLowerCase() === name.toLowerCase())) { inp.value = ''; return; }
+    players.push({ name, selected: false, guests: 0 });
+    inp.value = '';
+    renderPlayers();
+  }
+
+  document.getElementById('newPlayerInput').addEventListener('keydown', e => {
+    if (e.key === 'Enter') addPlayer();
+  });
+
+  function resetAll() {
+    players.forEach(p => { p.selected = false; p.guests = 0; });
+    renderPlayers();
+  }
+
+  function updateCalc() {
+    const court = parseFloat(document.getElementById('courtFee').value) || 0;
+    const shuttle = parseFloat(document.getElementById('shuttleFee').value) || 0;
+    const total = court + shuttle;
+    const selected = players.filter(p => p.selected);
+    const headcount = selected.reduce((s, p) => s + 1 + p.guests, 0);
+    const perPerson = headcount > 0 ? total / headcount : 0;
+
+    document.getElementById('totalCost').textContent = '$' + total.toFixed(2);
+    document.getElementById('headcount').textContent = headcount;
+    document.getElementById('perPerson').textContent = headcount > 0 ? '$' + perPerson.toFixed(2) : '—';
+
+    const section = document.getElementById('attendanceSection');
+    const emptyMsg = document.getElementById('emptyMsg');
+
+    if (selected.length === 0) {
+      section.style.display = 'none';
+      emptyMsg.style.display = 'block';
+      return;
+    }
+    section.style.display = 'block';
+    emptyMsg.style.display = 'none';
+
+    const tbody = document.getElementById('attendanceBody');
+    tbody.innerHTML = '';
+    selected.forEach(p => {
+      const ph = 1 + p.guests;
+      const amount = (perPerson * ph).toFixed(2);
+      const tr = document.createElement('tr');
+      tr.innerHTML = `
+        <td>${p.name}${p.guests > 0 ? `<span class="badge">+${p.guests} guest${p.guests > 1 ? 's' : ''}</span>` : ''}</td>
+        <td>${ph}</td>
+        <td>$${amount}</td>
+      `;
+      tbody.appendChild(tr);
+    });
+  }
+
+  function copyResult() {
+    const court = parseFloat(document.getElementById('courtFee').value) || 0;
+    const shuttle = parseFloat(document.getElementById('shuttleFee').value) || 0;
+    const total = court + shuttle;
+    const selected = players.filter(p => p.selected);
+    const headcount = selected.reduce((s, p) => s + 1 + p.guests, 0);
+    const perPerson = headcount > 0 ? total / headcount : 0;
+
+    let msg = `🏸 Badminton payment\nCourt: $${court.toFixed(2)} | Shuttlecocks: $${shuttle.toFixed(2)} | Total: $${total.toFixed(2)}\n\n`;
+    selected.forEach(p => {
+      const ph = 1 + p.guests;
+      msg += `${p.name}${p.guests > 0 ? ` (+${p.guests} guest${p.guests > 1 ? 's' : ''})` : ''}: $${(perPerson * ph).toFixed(2)}\n`;
+    });
+    msg += `\nPer person: $${perPerson.toFixed(2)}`;
+
+    navigator.clipboard.writeText(msg).then(() => {
+      const btn = document.querySelector('.copy-btn');
+      btn.innerHTML = '<i class="ti ti-check"></i> Copied!';
+      setTimeout(() => btn.innerHTML = '<i class="ti ti-copy"></i> Copy payment message', 2000);
+    });
+  }
+
+  renderPlayers();
+</script>
+</body>
+</html>
