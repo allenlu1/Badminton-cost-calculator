@@ -54,6 +54,16 @@
     .section { margin-bottom: 2rem; }
     h2 { font-size: 15px; font-weight: 500; margin-bottom: 12px; }
 
+    .field-row { display: flex; flex-direction: column; gap: 6px; margin-bottom: 12px; }
+    .field-row label { font-size: 13px; color: var(--text-secondary); }
+    .field-row input {
+      padding: 8px 10px; border-radius: var(--radius-md);
+      border: 0.5px solid var(--border); background: var(--bg);
+      color: var(--text-primary); font-size: 14px; font-family: var(--font);
+      outline: none; width: 100%;
+    }
+    .field-row input:focus { border-color: var(--border-info); box-shadow: 0 0 0 2px rgba(24,95,165,0.15); }
+
     .player-grid {
       display: grid;
       grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
@@ -106,7 +116,8 @@
     }
     .add-row button:hover, .copy-btn:hover { background: var(--bg-secondary); }
 
-    .costs-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 1rem; }
+    .costs-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 1rem; }
+    .costs-grid.three { grid-template-columns: 1fr 1fr 1fr; }
     .cost-field { display: flex; flex-direction: column; gap: 6px; }
     .cost-field label { font-size: 13px; color: var(--text-secondary); }
     .cost-field input {
@@ -116,6 +127,11 @@
       outline: none;
     }
     .cost-field input:focus { border-color: var(--border-info); box-shadow: 0 0 0 2px rgba(24,95,165,0.15); }
+    .cost-field .computed {
+      padding: 8px 10px; border-radius: var(--radius-md);
+      border: 0.5px solid var(--border); background: var(--bg-secondary);
+      color: var(--text-primary); font-size: 14px;
+    }
 
     .summary-cards { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 1.5rem; }
     .summary-card { background: var(--bg-secondary); border-radius: var(--radius-md); padding: 12px; }
@@ -149,6 +165,7 @@
 
     .loading { font-size: 13px; color: var(--text-tertiary); padding: 1rem 0; }
     .error { font-size: 13px; color: #a32d2d; padding: 0.5rem 0; }
+    .hint { font-size: 12px; color: var(--text-tertiary); margin-top: 8px; }
   </style>
 </head>
 <body>
@@ -158,6 +175,16 @@
     <p>Select who attended, enter costs, and split the bill.</p>
   </header>
 
+  <!-- Date -->
+  <div class="section">
+    <h2>Session date</h2>
+    <div class="field-row">
+      <label>Date</label>
+      <input type="date" id="sessionDate" />
+    </div>
+  </div>
+
+  <!-- Players -->
   <div class="section">
     <div class="top-row">
       <h2>Players</h2>
@@ -170,24 +197,34 @@
       <input type="text" id="newPlayerInput" placeholder="Add player for this session…" maxlength="30" />
       <button onclick="addPlayer()"><i class="ti ti-plus" aria-hidden="true"></i> Add</button>
     </div>
-    <p style="font-size:12px; color:var(--text-tertiary); margin-top:8px;">
+    <p class="hint">
       <i class="ti ti-info-circle" style="font-size:13px; vertical-align:-2px;" aria-hidden="true"></i>
       To permanently add a player, edit <code>players.json</code> in GitHub.
     </p>
   </div>
 
+  <!-- Costs -->
   <div class="section">
     <h2>Session costs</h2>
-    <div class="costs-row">
+    <div class="costs-grid">
       <div class="cost-field">
         <label>Court fee ($)</label>
-        <input type="number" id="courtFee" value="80" min="0" step="1" oninput="updateCalc()" />
+        <input type="number" id="courtFee" value="136" min="0" step="1" oninput="updateCalc()" />
       </div>
       <div class="cost-field">
-        <label>Shuttlecocks ($)</label>
-        <input type="number" id="shuttleFee" value="30" min="0" step="1" oninput="updateCalc()" />
+        <label>Shuttlecocks used</label>
+        <input type="number" id="shuttleCount" value="0" min="0" step="1" oninput="updateCalc()" />
+      </div>
+      <div class="cost-field">
+        <label>Cost per shuttlecock ($)</label>
+        <input type="number" id="shuttleUnitCost" value="0" min="0" step="0.5" oninput="updateCalc()" />
+      </div>
+      <div class="cost-field">
+        <label>Total shuttlecock cost ($)</label>
+        <div class="computed" id="shuttleTotalDisplay">$0.00</div>
       </div>
     </div>
+
     <div class="summary-cards">
       <div class="summary-card">
         <div class="label">Total cost</div>
@@ -204,6 +241,7 @@
     </div>
   </div>
 
+  <!-- Attendance summary -->
   <div class="section" id="attendanceSection" style="display:none;">
     <h2>Attendance summary</h2>
     <table>
@@ -219,6 +257,20 @@
 
 <script>
   let players = [];
+
+  // Default to today in Sydney time
+  function getSydneyDateString() {
+    return new Date().toLocaleDateString('en-CA', { timeZone: 'Australia/Sydney' });
+  }
+
+  function formatDisplayDate(dateStr) {
+    if (!dateStr) return '';
+    const [y, m, d] = dateStr.split('-');
+    const date = new Date(y, m - 1, d);
+    return date.toLocaleDateString('en-AU', { weekday: 'short', day: 'numeric', month: 'long', year: 'numeric' });
+  }
+
+  document.getElementById('sessionDate').value = getSydneyDateString();
 
   async function loadPlayers() {
     const grid = document.getElementById('playerGrid');
@@ -309,8 +361,13 @@
 
   function updateCalc() {
     const court = parseFloat(document.getElementById('courtFee').value) || 0;
-    const shuttle = parseFloat(document.getElementById('shuttleFee').value) || 0;
-    const total = court + shuttle;
+    const shuttleCount = parseInt(document.getElementById('shuttleCount').value) || 0;
+    const shuttleUnit = parseFloat(document.getElementById('shuttleUnitCost').value) || 0;
+    const shuttleTotal = shuttleCount * shuttleUnit;
+
+    document.getElementById('shuttleTotalDisplay').textContent = '$' + shuttleTotal.toFixed(2);
+
+    const total = court + shuttleTotal;
     const selected = players.filter(p => p.selected);
     const headcount = selected.reduce((s, p) => s + 1 + p.guests, 0);
     const perPerson = headcount > 0 ? total / headcount : 0;
@@ -347,18 +404,27 @@
 
   function copyResult() {
     const court = parseFloat(document.getElementById('courtFee').value) || 0;
-    const shuttle = parseFloat(document.getElementById('shuttleFee').value) || 0;
-    const total = court + shuttle;
+    const shuttleCount = parseInt(document.getElementById('shuttleCount').value) || 0;
+    const shuttleUnit = parseFloat(document.getElementById('shuttleUnitCost').value) || 0;
+    const shuttleTotal = shuttleCount * shuttleUnit;
+    const total = court + shuttleTotal;
     const selected = players.filter(p => p.selected);
     const headcount = selected.reduce((s, p) => s + 1 + p.guests, 0);
     const perPerson = headcount > 0 ? total / headcount : 0;
+    const dateStr = document.getElementById('sessionDate').value;
+    const displayDate = formatDisplayDate(dateStr);
 
-    let msg = `🏸 Badminton payment\nCourt: $${court.toFixed(2)} | Shuttlecocks: $${shuttle.toFixed(2)} | Total: $${total.toFixed(2)}\n\n`;
-    selected.forEach(p => {
-      const ph = 1 + p.guests;
-      msg += `${p.name}${p.guests > 0 ? ` (+${p.guests} guest${p.guests > 1 ? 's' : ''})` : ''}: $${(perPerson * ph).toFixed(2)}\n`;
-    });
-    msg += `\nPer person: $${perPerson.toFixed(2)}`;
+    let msg = `${displayDate}\n\n`;
+    msg += `Cost breakdown\n`;
+    msg += `Court fee:         $${court.toFixed(2)}\n`;
+    msg += `Shuttlecocks (${shuttleCount} ×):  $${shuttleTotal.toFixed(2)}\n`;
+    msg += `─────────────────────\n`;
+    msg += `Total:             $${total.toFixed(2)}\n\n`;
+    msg += `Total ${headcount} players and each person pays: $${perPerson.toFixed(2)}\n\n`;
+    msg += `BSB: 112-879\n`;
+    msg += `Acc: 477398765\n`;
+    msg += `Name: I-Wei Lu\n\n`;
+    msg += `Please like the post once you've made the payment. Thx`;
 
     navigator.clipboard.writeText(msg).then(() => {
       const btn = document.querySelector('.copy-btn');
