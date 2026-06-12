@@ -138,32 +138,42 @@
 
     .empty { font-size: 13px; color: var(--text-tertiary); padding: 0.5rem 0; }
 
-    .reset-row { display: flex; justify-content: flex-end; margin-bottom: 10px; }
+    .top-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+    .top-row h2 { margin-bottom: 0; }
     .reset-btn {
       background: none; border: none; color: var(--text-tertiary);
       font-size: 12px; cursor: pointer; font-family: var(--font);
       display: flex; align-items: center; gap: 4px; padding: 4px 0;
     }
     .reset-btn:hover { color: var(--text-secondary); }
+
+    .loading { font-size: 13px; color: var(--text-tertiary); padding: 1rem 0; }
+    .error { font-size: 13px; color: #a32d2d; padding: 0.5rem 0; }
   </style>
 </head>
 <body>
 <div class="app">
   <header>
-    <h1><i class="ti ti-racket" aria-hidden="true"></i> Badminton cost calculator</h1>
+    <h1><i class="ti ti-feather" aria-hidden="true"></i> Badminton cost calculator</h1>
     <p>Select who attended, enter costs, and split the bill.</p>
   </header>
 
   <div class="section">
-    <h2>Players</h2>
-    <div class="reset-row">
+    <div class="top-row">
+      <h2>Players</h2>
       <button class="reset-btn" onclick="resetAll()"><i class="ti ti-refresh" aria-hidden="true"></i> Clear selection</button>
     </div>
-    <div class="player-grid" id="playerGrid"></div>
+    <div class="player-grid" id="playerGrid">
+      <p class="loading">Loading players…</p>
+    </div>
     <div class="add-row">
-      <input type="text" id="newPlayerInput" placeholder="Add new player name…" maxlength="30" />
+      <input type="text" id="newPlayerInput" placeholder="Add player for this session…" maxlength="30" />
       <button onclick="addPlayer()"><i class="ti ti-plus" aria-hidden="true"></i> Add</button>
     </div>
+    <p style="font-size:12px; color:var(--text-tertiary); margin-top:8px;">
+      <i class="ti ti-info-circle" style="font-size:13px; vertical-align:-2px;" aria-hidden="true"></i>
+      To permanently add a player, edit <code>players.json</code> in GitHub.
+    </p>
   </div>
 
   <div class="section">
@@ -204,12 +214,24 @@
       <i class="ti ti-copy" aria-hidden="true"></i> Copy payment message
     </button>
   </div>
-  <p class="empty" id="emptyMsg">No players selected yet.</p>
+  <p class="empty" id="emptyMsg" style="display:none;">No players selected yet.</p>
 </div>
 
 <script>
-  const DEFAULT_PLAYERS = ["Jason","Vivian","Andy","Raymond","Cindy","Allen","Ken","Vince","Jimmy","Astrid"];
-  let players = DEFAULT_PLAYERS.map(n => ({ name: n, selected: false, guests: 0 }));
+  let players = [];
+
+  async function loadPlayers() {
+    const grid = document.getElementById('playerGrid');
+    try {
+      const res = await fetch('players.json?v=' + Date.now());
+      if (!res.ok) throw new Error('Failed to load');
+      const names = await res.json();
+      players = names.map(n => ({ name: n, selected: false, guests: 0 }));
+      renderPlayers();
+    } catch (e) {
+      grid.innerHTML = '<p class="error"><i class="ti ti-alert-circle"></i> Could not load players.json</p>';
+    }
+  }
 
   function renderPlayers() {
     const grid = document.getElementById('playerGrid');
@@ -345,7 +367,7 @@
     });
   }
 
-  renderPlayers();
+  loadPlayers();
 </script>
 </body>
 </html>
